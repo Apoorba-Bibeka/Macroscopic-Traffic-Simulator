@@ -1,0 +1,63 @@
+# 1 Creating a macroscopic traffic simulator (LWR Model)
+
+Following are assumptions made:  
+              1.Reaction time = 2 seconds  
+              2.Free flow speed = 60 mph (26.8224 m/s)  
+              3.$\Delta t$ = 2.5 seconds or 0.0006944444 hr
+              4.$\Delta x$ = 70 meters  ($\geq \Delta t \times u_f$ = 67.057~70 meters or 0.043496 miles)   
+              
+  
+# Basic macroscopic simulator Code
+```{r}
+macrosimulator_fun<-function(k_jam,del_x,del_t,len,q_initial,no_iter){
+  k_bumper=264   #Assuming average vehicle length of 20 feets
+  no_iter=5000
+  del_x=0.043496
+  del_t =0.000694444
+  len_q= 10
+  q_initial=1500
+  u_initial=60
+  k_initial=q_initial/u_initial
+  no_sections= floor(len_q/del_x)
+  
+  Q=matrix(data=NA,ncol=no_sections,nrow=no_iter+1)
+
+  q=matrix(data=NA,ncol=no_sections,nrow=no_iter+1)
+  k=matrix(data=NA,ncol=no_sections,nrow=no_iter+1)
+  u=matrix(data=NA,ncol=no_sections,nrow=no_iter+1)
+  q[1,]<-q_initial
+  k[1,]<-k_initial
+  u[1,]<-u_initial
+  s<-rep(0,length(q[1,]))
+  d<-rep(0,length(q[1,]))
+
+  for(t in 1:(no_iter-1)){
+    s= (k_bumper-k[t,])*del_x
+    s_i_1<-s[-1]
+    length(s_i_1)         #s_i_1 Contains the s values for i+1 celll. Doesn't contain the value for the last cell (last cell+1)
+    q[t,1]<-q_initial    # At each time step intialize the flow rate in the first cell as q_initial
+    d= mapply(min,(q[t,]*del_t),q[t,]*del_x)   #Find d for all cells
+    d=d[-length(d)]       #Reduce the dimension of d so it matches s(In terms of no of cells)
+    Q[t,1:length(s)-1]<-mapply(min, s_i_1, d)  
+    Q[t,length(s)]<-Q[t,length(s)-1]   #Flow rate in the last cell is considered equal to the flow rate in second last cell
+    Q_diff<-diff(Q[1,])       #Get the flow difference of subsequent cells 
+
+    Q_diff<-c(0,Q_diff)  #Assume setction 0 and 1 have 0 difference
+    
+    k[t+1,]<- k[t,] + (1/del_x)* Q_diff
+    u[t+1,]<-u_f*(1-(k[t+1,]/k_jam))
+    q[t+1,]<-u[t+1,]*k[t+1,]
+  }
+  
+  for(t in 1 : 3){
+    print(t)
+  }
+  
+}
+```
+
+```{r}
+
+  u_f=60
+  k_jam=120
+```
